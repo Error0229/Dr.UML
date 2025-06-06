@@ -438,7 +438,7 @@ func TestAttributeOperationsUndoRedo(t *testing.T) {
 
 	attrs := gadget.GetAttributes(1)
 	initialCount := len(attrs)
-	
+
 	// Add new attribute
 	err = diagram.AddAttributeToGadget(1, "test attribute")
 	assert.NoError(t, err)
@@ -460,7 +460,7 @@ func TestAttributeOperationsUndoRedo(t *testing.T) {
 	// Undo content change
 	err = diagram.cmdMgr.Undo()
 	assert.NoError(t, err)
-	
+
 	// Get latest attributes and verify content restored
 	attrs = gadget.GetAttributes(1)
 	assert.Equal(t, "test attribute", attrs[lastIndex].GetContent())
@@ -468,7 +468,7 @@ func TestAttributeOperationsUndoRedo(t *testing.T) {
 	// Redo content change
 	err = diagram.cmdMgr.Redo()
 	assert.NoError(t, err)
-	
+
 	// Get latest attributes and verify content changed again
 	attrs = gadget.GetAttributes(1)
 	assert.Equal(t, "modified content", attrs[lastIndex].GetContent())
@@ -517,7 +517,7 @@ func TestAttributeOperationsUndoRedo(t *testing.T) {
 	// Test gadget point with undo/redo
 	oldPoint := gadget.GetPoint()
 	newPoint := utils.Point{X: 30, Y: 40}
-	
+
 	err = diagram.SetPointGadget(newPoint)
 	assert.NoError(t, err)
 	assert.Equal(t, newPoint, gadget.GetPoint())

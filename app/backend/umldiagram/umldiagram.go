@@ -340,7 +340,7 @@ func (ud *UMLDiagram) AddAttributeToGadget(section int, content string) duerror.
 
 		cmd := &funcCommand{
 			exec: func() duerror.DUError { return g.AddAttribute(section, content) },
-			undo: func() duerror.DUError { 
+			undo: func() duerror.DUError {
 				if addedIndex >= 0 {
 					return g.RemoveAttribute(section, addedIndex)
 				}

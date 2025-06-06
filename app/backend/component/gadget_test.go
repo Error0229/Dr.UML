@@ -105,7 +105,7 @@ func TestGetAttributes(t *testing.T) {
 	g := newEmptyGadget(Class, utils.Point{X: 1, Y: 1})
 
 	// Test valid section
-	attrs := g.GetAttributes(1)  // Section 1 has attributes by default
+	attrs := g.GetAttributes(1) // Section 1 has attributes by default
 	assert.NotNil(t, attrs)
 	assert.Equal(t, 3, len(attrs)) // Should have 3 attributes by default in section 1
 
@@ -114,7 +114,7 @@ func TestGetAttributes(t *testing.T) {
 	attrs = g.GetAttributes(1)
 	assert.NotNil(t, attrs)
 	assert.Equal(t, 4, len(attrs))
-	assert.Equal(t, "test attr", attrs[3].GetContent())  // New attribute should be at the end
+	assert.Equal(t, "test attr", attrs[3].GetContent()) // New attribute should be at the end
 
 	// Test invalid section
 	attrs = g.GetAttributes(-1)
