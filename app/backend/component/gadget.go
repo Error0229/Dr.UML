@@ -101,6 +101,13 @@ func (g *Gadget) GetIsSelected() bool {
 	return g.IsSelected
 }
 
+func (g *Gadget) GetAttributes(section int) []*attribute.Attribute {
+	if err := g.validateSection(section); err != nil {
+		return nil
+	}
+	return g.attributes[section]
+}
+
 // Setter
 func (g *Gadget) SetPoint(point utils.Point) duerror.DUError {
 	g.point = point

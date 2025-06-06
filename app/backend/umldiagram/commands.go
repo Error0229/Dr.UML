@@ -120,8 +120,45 @@ func (c *removeComponentsCommand) Execute() duerror.DUError {
 }
 
 func (c *removeComponentsCommand) Unexecute() duerror.DUError {
-	// undo not supported yet
-	return nil
+	// Add back each removed component
+	for _, comp := range c.components {
+		switch comp := comp.(type) {
+		case *component.Gadget:
+			// Register update parent draw and insert back into container
+			if err := comp.RegisterUpdateParentDraw(c.diagram.updateDrawData); err != nil {
+				return err
+			}
+			if err := c.diagram.componentsContainer.Insert(comp); err != nil {
+				return err
+			}
+			// Recreate empty association arrays for the gadget
+			c.diagram.associations[comp] = [2][]*component.Association{{}, {}}
+
+		case *component.Association:
+			// Get the parent gadgets and recreate association map entries
+			stGad := comp.GetParentStart()
+			enGad := comp.GetParentEnd()
+
+			if err := comp.RegisterUpdateParentDraw(c.diagram.updateDrawData); err != nil {
+				return err
+			}
+			if err := c.diagram.componentsContainer.Insert(comp); err != nil {
+				return err
+			}
+
+			// Add association back to each gadget's association list
+			tmp := c.diagram.associations[stGad]
+			tmp[0] = append(tmp[0], comp)
+			c.diagram.associations[stGad] = tmp
+
+			tmp = c.diagram.associations[enGad]
+			tmp[1] = append(tmp[1], comp)
+			c.diagram.associations[enGad] = tmp
+		}
+	}
+
+	c.diagram.lastModified = time.Now()
+	return c.diagram.updateDrawData()
 }
 
 // helper to wrap a function as a command.

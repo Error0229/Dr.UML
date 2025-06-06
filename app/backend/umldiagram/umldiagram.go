@@ -107,7 +107,14 @@ func (ud *UMLDiagram) SetPointGadget(point utils.Point) duerror.DUError {
 
 	switch g := c.(type) {
 	case *component.Gadget:
-		return g.SetPoint(point)
+		// Store the old point for undo
+		oldPoint := g.GetPoint()
+
+		cmd := &funcCommand{
+			exec: func() duerror.DUError { return g.SetPoint(point) },
+			undo: func() duerror.DUError { return g.SetPoint(oldPoint) },
+		}
+		return ud.cmdMgr.ExecuteCommand(cmd)
 	default:
 		return duerror.NewInvalidArgumentError("selected component is not a gadget")
 	}
@@ -121,7 +128,14 @@ func (ud *UMLDiagram) SetSetLayerGadget(layer int) duerror.DUError {
 
 	switch g := c.(type) {
 	case *component.Gadget:
-		return g.SetLayer(layer)
+		// Store the old layer for undo
+		oldLayer := g.GetLayer()
+
+		cmd := &funcCommand{
+			exec: func() duerror.DUError { return g.SetLayer(layer) },
+			undo: func() duerror.DUError { return g.SetLayer(oldLayer) },
+		}
+		return ud.cmdMgr.ExecuteCommand(cmd)
 	default:
 		return duerror.NewInvalidArgumentError("selected component is not a gadget")
 	}
@@ -135,7 +149,14 @@ func (ud *UMLDiagram) SetColorGadget(colorHexStr string) duerror.DUError {
 
 	switch g := c.(type) {
 	case *component.Gadget:
-		return g.SetColor(colorHexStr)
+		// Store the old color for undo
+		oldColor := g.GetColor()
+
+		cmd := &funcCommand{
+			exec: func() duerror.DUError { return g.SetColor(colorHexStr) },
+			undo: func() duerror.DUError { return g.SetColor(oldColor) },
+		}
+		return ud.cmdMgr.ExecuteCommand(cmd)
 	default:
 		return duerror.NewInvalidArgumentError("selected component is not a gadget")
 	}
@@ -149,7 +170,17 @@ func (ud *UMLDiagram) SetAttrContentGadget(section int, index int, content strin
 
 	switch g := c.(type) {
 	case *component.Gadget:
-		return g.SetAttrContent(section, index, content)
+		// Store the old content for undo
+		var oldContent string
+		if attrs := g.GetAttributes(section); attrs != nil && index >= 0 && index < len(attrs) {
+			oldContent = attrs[index].GetContent()
+		}
+
+		cmd := &funcCommand{
+			exec: func() duerror.DUError { return g.SetAttrContent(section, index, content) },
+			undo: func() duerror.DUError { return g.SetAttrContent(section, index, oldContent) },
+		}
+		return ud.cmdMgr.ExecuteCommand(cmd)
 	default:
 		return duerror.NewInvalidArgumentError("selected component is not a gadget")
 	}
@@ -162,7 +193,17 @@ func (ud *UMLDiagram) SetAttrSizeGadget(section int, index int, size int) duerro
 
 	switch g := c.(type) {
 	case *component.Gadget:
-		return g.SetAttrSize(section, index, size)
+		// Store the old size for undo
+		var oldSize int
+		if attrs := g.GetAttributes(section); attrs != nil && index >= 0 && index < len(attrs) {
+			oldSize = attrs[index].GetSize()
+		}
+
+		cmd := &funcCommand{
+			exec: func() duerror.DUError { return g.SetAttrSize(section, index, size) },
+			undo: func() duerror.DUError { return g.SetAttrSize(section, index, oldSize) },
+		}
+		return ud.cmdMgr.ExecuteCommand(cmd)
 	default:
 		return duerror.NewInvalidArgumentError("selected component is not a gadget")
 	}
@@ -175,7 +216,17 @@ func (ud *UMLDiagram) SetAttrStyleGadget(section int, index int, style int) duer
 
 	switch g := c.(type) {
 	case *component.Gadget:
-		return g.SetAttrStyle(section, index, style)
+		// Store the old style for undo
+		var oldStyle int
+		if attrs := g.GetAttributes(section); attrs != nil && index >= 0 && index < len(attrs) {
+			oldStyle = int(attrs[index].GetStyle())
+		}
+
+		cmd := &funcCommand{
+			exec: func() duerror.DUError { return g.SetAttrStyle(section, index, style) },
+			undo: func() duerror.DUError { return g.SetAttrStyle(section, index, oldStyle) },
+		}
+		return ud.cmdMgr.ExecuteCommand(cmd)
 	default:
 		return duerror.NewInvalidArgumentError("selected component is not a gadget")
 	}
@@ -280,8 +331,21 @@ func (ud *UMLDiagram) AddAttributeToGadget(section int, content string) duerror.
 	}
 	switch g := c.(type) {
 	case *component.Gadget:
+		// Get the current length to know where the new attribute will be added
+		initialLengths := g.GetAttributesLen()
+		addedIndex := -1
+		if section >= 0 && section < len(initialLengths) {
+			addedIndex = initialLengths[section]
+		}
+
 		cmd := &funcCommand{
 			exec: func() duerror.DUError { return g.AddAttribute(section, content) },
+			undo: func() duerror.DUError { 
+				if addedIndex >= 0 {
+					return g.RemoveAttribute(section, addedIndex)
+				}
+				return nil
+			},
 		}
 		return ud.cmdMgr.ExecuteCommand(cmd)
 	default:
@@ -296,8 +360,20 @@ func (ud *UMLDiagram) RemoveAttributeFromGadget(section int, index int) duerror.
 	}
 	switch g := c.(type) {
 	case *component.Gadget:
+		// Store the content before removing so we can restore it on undo
+		var content string
+		if attrs := g.GetAttributes(section); attrs != nil && index >= 0 && index < len(attrs) {
+			content = attrs[index].GetContent()
+		}
+
 		cmd := &funcCommand{
 			exec: func() duerror.DUError { return g.RemoveAttribute(section, index) },
+			undo: func() duerror.DUError {
+				if content != "" {
+					return g.AddAttribute(section, content)
+				}
+				return nil
+			},
 		}
 		return ud.cmdMgr.ExecuteCommand(cmd)
 	default:

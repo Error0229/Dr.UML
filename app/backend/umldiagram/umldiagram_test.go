@@ -418,6 +418,153 @@ func TestAddAttributeToGadget(t *testing.T) {
 	assert.Equal(t, "can only operate on one component", err.Error())
 }
 
+func TestAttributeOperationsUndoRedo(t *testing.T) {
+	diagram, err := CreateEmptyUMLDiagram("TestDiagram", ClassDiagram)
+	assert.NoError(t, err)
+
+	// Add and select a gadget
+	err = diagram.AddGadget(component.Class, utils.Point{X: 10, Y: 20}, 0, drawdata.DefaultGadgetColor, "sample header")
+	assert.NoError(t, err)
+
+	components := diagram.componentsContainer.GetAll()
+	assert.Equal(t, 1, len(components))
+	gadget, ok := components[0].(*component.Gadget)
+	assert.True(t, ok)
+	diagram.componentsSelected[gadget] = true
+
+	// Test Add/Remove Attribute with undo/redo
+	err = diagram.AddAttributeToGadget(1, "test attribute")
+	assert.NoError(t, err)
+
+	attrs := gadget.GetAttributes(1)
+	initialCount := len(attrs)
+	
+	// Add new attribute
+	err = diagram.AddAttributeToGadget(1, "test attribute")
+	assert.NoError(t, err)
+
+	// Verify attribute was added
+	attrs = gadget.GetAttributes(1)
+	assert.Equal(t, initialCount+1, len(attrs))
+	lastIndex := len(attrs) - 1
+	assert.Equal(t, "test attribute", attrs[lastIndex].GetContent())
+
+	// Test modifying attribute content with undo/redo
+	err = diagram.SetAttrContentGadget(1, lastIndex, "modified content")
+	assert.NoError(t, err)
+
+	// Get latest attributes and verify content changed
+	attrs = gadget.GetAttributes(1)
+	assert.Equal(t, "modified content", attrs[lastIndex].GetContent())
+
+	// Undo content change
+	err = diagram.cmdMgr.Undo()
+	assert.NoError(t, err)
+	
+	// Get latest attributes and verify content restored
+	attrs = gadget.GetAttributes(1)
+	assert.Equal(t, "test attribute", attrs[lastIndex].GetContent())
+
+	// Redo content change
+	err = diagram.cmdMgr.Redo()
+	assert.NoError(t, err)
+	
+	// Get latest attributes and verify content changed again
+	attrs = gadget.GetAttributes(1)
+	assert.Equal(t, "modified content", attrs[lastIndex].GetContent())
+
+	// Test modifying attribute size with undo/redo
+	initialSize := attrs[lastIndex].GetSize()
+	err = diagram.SetAttrSizeGadget(1, lastIndex, 20)
+	assert.NoError(t, err)
+	assert.Equal(t, 20, attrs[lastIndex].GetSize())
+
+	err = diagram.cmdMgr.Undo()
+	assert.NoError(t, err)
+	assert.Equal(t, initialSize, attrs[lastIndex].GetSize())
+
+	err = diagram.cmdMgr.Redo()
+	assert.NoError(t, err)
+	assert.Equal(t, 20, attrs[lastIndex].GetSize())
+
+	// Test removing the attribute with undo/redo
+	err = diagram.RemoveAttributeFromGadget(1, lastIndex)
+	assert.NoError(t, err)
+
+	// Get latest attributes and verify removal
+	attrs = gadget.GetAttributes(1)
+	assert.Equal(t, initialCount, len(attrs))
+
+	// Undo remove
+	err = diagram.cmdMgr.Undo()
+	assert.NoError(t, err)
+
+	// Get latest attributes and verify restoration
+	attrs = gadget.GetAttributes(1)
+	assert.Equal(t, initialCount+1, len(attrs))
+	lastIndex = len(attrs) - 1
+	assert.Equal(t, "modified content", attrs[lastIndex].GetContent())
+	assert.Equal(t, 12, attrs[lastIndex].GetSize()) // Default size value
+
+	// Redo remove
+	err = diagram.cmdMgr.Redo()
+	assert.NoError(t, err)
+
+	// Get latest attributes and verify removal
+	attrs = gadget.GetAttributes(1)
+	assert.Equal(t, initialCount, len(attrs))
+
+	// Test gadget point with undo/redo
+	oldPoint := gadget.GetPoint()
+	newPoint := utils.Point{X: 30, Y: 40}
+	
+	err = diagram.SetPointGadget(newPoint)
+	assert.NoError(t, err)
+	assert.Equal(t, newPoint, gadget.GetPoint())
+
+	err = diagram.cmdMgr.Undo()
+	assert.NoError(t, err)
+	assert.Equal(t, oldPoint, gadget.GetPoint())
+
+	err = diagram.cmdMgr.Redo()
+	assert.NoError(t, err)
+	assert.Equal(t, newPoint, gadget.GetPoint())
+
+	// Test gadget layer with undo/redo
+	oldLayer := gadget.GetLayer()
+	newLayer := oldLayer + 1
+
+	err = diagram.SetSetLayerGadget(newLayer)
+	assert.NoError(t, err)
+	assert.Equal(t, newLayer, gadget.GetLayer())
+
+	err = diagram.cmdMgr.Undo()
+	assert.NoError(t, err)
+	assert.Equal(t, oldLayer, gadget.GetLayer())
+
+	err = diagram.cmdMgr.Redo()
+	assert.NoError(t, err)
+	assert.Equal(t, newLayer, gadget.GetLayer())
+
+	// Test gadget color with undo/redo
+	oldColor := gadget.GetColor()
+	newColor := "#FF0000"
+
+	err = diagram.SetColorGadget(newColor)
+	assert.NoError(t, err)
+	assert.Equal(t, newColor, gadget.GetColor())
+
+	err = diagram.cmdMgr.Undo()
+	assert.NoError(t, err)
+	assert.Equal(t, oldColor, gadget.GetColor())
+
+	err = diagram.cmdMgr.Redo()
+	assert.NoError(t, err)
+	assert.Equal(t, newColor, gadget.GetColor())
+}
+
+// END OF TESTS
+
 // Mock container for testing selection methods
 type mockContainer struct {
 	mockComponent component.Component
