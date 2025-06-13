@@ -56,16 +56,20 @@ end selectDiagram
 autonumber
 autoactivate on
 group#gold #white addGadgetToDiagram
-   -> ":UMLProject": addGadget(type, point)
+    -> ":UMLProject": addGadget(type, point)
     note left of ":UMLProject" #red: by Controller
         ":UMLProject" -> "currentDiagram\n:*UMLDiagram"  : addGadget(type, point)
-           "currentDiagram\n:*UMLDiagram" -> ":Components"  : addGadget(type, point)
-                ":Components"  --> "gadget:Gadget" **  : createGadget(type, point)
-                note right of ":Components" #red: by Creator
-                ":Components" -> ":Components": components = append(components, gadget)
-                note right of ":Components": append is a built-in function
+            "currentDiagram\n:*UMLDiagram" --> "addCmd:AddCommand" ** : newAddGadgetCommand(type, point)
+            "currentDiagram\n:*UMLDiagram" -> ":commandManager" : ExecuteCommand(addCmd)
+                ":commandManager" -> "addCmd:AddCommand" : Execute()
+                    "addCmd:AddCommand" -> ":Components" : addGadget(type, point)
+                        ":Components"  --> "gadget:Gadget" ** : createGadget(type, point)
+                        note right of ":Components" #red: by Creator
+                        ":Components" -> ":Components": components = append(components, gadget)
+                        note right of ":Components": append is a built-in function
+                        return
+                    return
                 return
-            return
         return
     return
 end addGadgetToDiagram
@@ -86,22 +90,27 @@ return
 ...
 -> ":UMLProject": endAddAssociation(type, point)
     ":UMLProject" -> "currentDiagram\n:*UMLDiagram": endAddAssociation(type, point)
-        "currentDiagram\n:*UMLDiagram" -> ":Components": addAssociation(type, startPoint, point)
-            ":Components" -> ":Components": parents = [findGadget(startPoint), findGadget(point)]
+        "currentDiagram\n:*UMLDiagram" --> "assCmd:AddCommand" ** : newAddAssociationCommand(type, startPoint, point)
+        "currentDiagram\n:*UMLDiagram" -> ":commandManager" : ExecuteCommand(assCmd)
+            ":commandManager" -> "assCmd:AddCommand" : Execute()
+                "assCmd:AddCommand" -> ":Components": addAssociation(type, startPoint, point)
+                    ":Components" -> ":Components": parents = [findGadget(startPoint), findGadget(point)]
+                    return
+
+                    opt#gold #white both parents are not null
+                        ":Components" --> "ass:Association" ** : createAssociation(type, parents)
+                        note right of ":Components" #red: by Creator
+
+                        ":Components" -> ":Components" : adjustAssociationPath(*association)
+                        note right of ":Components": adjust the pathing of newly created association to prevent overlapping
+                        return
+
+                        ":Components" -> ":Components": components = append(components, ass)
+                        note right of ":Components": append is a golang built-in function
+                        return
+                    end
+                return
             return
-
-            opt#gold #white both parents are not null
-                ":Components" --> "ass:Association" ** : createAssociation(type, parents)
-                note right of ":Components" #red: by Creator
-
-                ":Components" -> ":Components" : adjustAssociationPath(*association)
-                note right of ":Components": adjust the pathing of newly created association to prevent overlapping
-                return
-
-                ":Components" -> ":Components": components = append(components, ass)
-                note right of ":Components": append is a golang built-in function
-                return
-            end
         return
     return
 return
@@ -318,19 +327,24 @@ group#gold #white deleteComponent
     -> ":UMLProject": DeleteComponent()
     note left of ":UMLProject" #red: by Controller
         ":UMLProject" -> "currentDiagram\n:*UMLDiagram": DeleteComponent()
-            "currentDiagram\n:*UMLDiagram" -> ":Components": DeleteComponent()
+            "currentDiagram\n:*UMLDiagram" --> "delCmd:DeleteCommand" ** : newDeleteCommand(selectedComponents)
+            "currentDiagram\n:*UMLDiagram" -> ":commandManager" : ExecuteCommand(delCmd)
+                ":commandManager" -> "delCmd:DeleteCommand" : Execute()
+                    "delCmd:DeleteCommand" -> ":Components": DeleteComponent()
 
-            ":Components" -> ":Components": removeComponents = getGroupComponents()
-            return
-            note right
-            ":Components": getGroupComponents() return gadgets and associations.
-            As for every association, its parents are also included.
-            end note
-            loop#gold #white component in removeComponents
-                ":Components" -> ":Components": delete(component)
-                note right of ":Components": delete is a built-in function
+                    ":Components" -> ":Components": removeComponents = getGroupComponents()
+                    return
+                    note right
+                    ":Components": getGroupComponents() return gadgets and associations.
+                    As for every association, its parents are also included.
+                    end note
+                    loop#gold #white component in removeComponents
+                        ":Components" -> ":Components": delete(component)
+                        note right of ":Components": delete is a built-in function
+                        return
+                    end
+                    return
                 return
-            end
             return
         return
     return
